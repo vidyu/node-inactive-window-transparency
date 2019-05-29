@@ -1,0 +1,16 @@
+{
+  "name": "node-inactive-window-transparency",
+  "version": "0.1.0",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "nexe src/index.js"
+  },
+  "dependencies": {
+    "convict": "^5.0.0",
+    "i3": "^0.2.1"
+  },
+  "devDependencies": {
+    "nexe": "^3.2.1"
+  }
+}
