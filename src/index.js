@@ -1,5 +1,8 @@
 const i3 = require('i3');
 const {exec} = require('child_process');
+const {resolve} = require('path');
+
+const CONFIG_PATH = resolve(require('os').homedir(), '.config', 'node-inactive-window-transparency.json');
 
 const config = require('convict')({
   inactive: {
@@ -19,8 +22,25 @@ const config = require('convict')({
     format: ['sway', 'i3'],
     default: 'sway',
     arg: 'wm'
+  },
+  overrides: {
+    doc: 'Overrides object',
+    format: Object,
+    default: {}
   }
 });
+
+try {
+  config.loadFile(CONFIG_PATH);
+} catch (e) {
+  // eslint-disable-next-line no-console
+  console.info(`You can set configuration at ${CONFIG_PATH}`);
+}
+
+const overrides = config.get('overrides');
+
+const getOverride = node => node && node.window_properties && overrides[node.window_properties.class] !== undefined && overrides[node.window_properties.class] || 0;
+
 
 const inactiveOpacity = config.get('inactive');
 const activeOpacity = config.get('active');
@@ -57,14 +77,17 @@ const tree = client => new Promise((res, rej) => {
   });
 });
 
-
 // setInitialOpacity : client -> Effect
 const setInitialOpacity = client => tree(client).then(root => {
   for (const node of iterateNodes(root)) {
-    (node.type === 'con' && node.nodes.length === 0)
-      && client.command(`[con_id=${node.id}] opacity ${inactiveOpacity}`);
+    if (node.type === 'con' && node.nodes.length === 0) {
+      if (node.focused) {
+        client.command(`[con_id=${node.id}] opacity ${activeOpacity + getOverride(node)}`);
+      } else {
+        client.command(`[con_id=${node.id}] opacity ${inactiveOpacity + getOverride(node)}`);
+      }
+    }
   }
-  client.command(`opacity ${activeOpacity}`);
 });
 
 
@@ -76,10 +99,10 @@ const watchFocus = client => {
       return;
     }
     if (lastContainer) {
-      client.command(`[con_id=${lastContainer.id}] opacity ${inactiveOpacity}`);
+      client.command(`[con_id=${lastContainer.id}] opacity ${inactiveOpacity + getOverride(lastContainer)}`);
     }
     lastContainer = container;
-    client.command(`opacity ${activeOpacity}`);
+    client.command(`opacity ${activeOpacity + getOverride(container)}`);
   });
 };
 
